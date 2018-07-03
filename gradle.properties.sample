@@ -1,0 +1,6 @@
+ARTIFACT_VERSION=1.0.0
+ARTIFACT_NAME=sample-app
+ARTIFACT_PACKAGE=io.onecloud.sample.package
+ARTIFACT_PACKAGING=jar
+COMPANY=OneCloudInc
+REPOSITORY_NAME=maven_repository
