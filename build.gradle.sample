@@ -1,19 +1,10 @@
 plugins {
     // Apply the java plugin to add support for Java
-    id 'com.github.johnrengelman.shadow' version '2.0.2'
     id 'java'
-    id 'maven'
+    id 'maven-publish'
 }
 
-apply plugin: 'maven'
-
-configurations {
-    deployerJar
-}
-
-shadowJar {
-    archiveName = "sample-app.${extension}"
-}
+apply plugin: 'maven-publish'
 
 group ARTIFACT_PACKAGE
 version ARTIFACT_VERSION
@@ -22,63 +13,31 @@ sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
-    maven { url "https://raw.github.com/synergian/wagon-git/releases" }
 }
 
-uploadArchives {
-    repositories.mavenDeployer {
-        configuration = configurations.deployerJar
-        repository(url: 'git:releases://git@github.com:OneCloudInc/maven_repository.git')
-        uniqueVersion = true
-        pom.project {
-            groupId = ARTIFACT_PACKAGE
-            version = ARTIFACT_VERSION
-            artifactId = ARTIFACT_NAME
-            packaging ARTIFACT_PACKAGING
+/*
+// Uncomment this section to also publish the source jars
+java {
+    withSourcesJar()
+}
+*/
+
+publishing {
+    publications {
+       mavenJava(MavenPublication) {
+           groupId = ARTIFACT_PACKAGE
+           artifactId = ARTIFACT_NAME
+           version = ARTIFACT_VERSION
+           from components.java
         }
     }
-}
-
-dependencies {
-    deployerJar "ar.com.synergian:wagon-git:0.2.3"
-}
-
-task lookForArtifacts {
-    doLast {
-        def repositoryUrl = 'https://github.com/' + COMPANY + '/' + REPOSITORY_NAME + '/raw/releases/' + 'io/onecloud/bizapp/sdk/' + ARTIFACT_NAME + '/' + ARTIFACT_VERSION
-        if (urlExists(repositoryUrl)) {
-            throw new RuntimeException("Artifact with version " + ARTIFACT_VERSION + " already exist - not executing uploadArchives")
+    repositories {
+        maven {
+            url = "https://maven.pkg.github.com/${COMPANY}/${REPOSITORY_NAME}"
+            credentials {
+                username = System.getenv("GITHUB_USERNAME")
+                password = System.getenv("GITHUB_TOKEN")
+            }
         }
-        return true
     }
-}
-
-uploadArchives.dependsOn lookForArtifacts
-
-def urlExists(String repositoryUrl) {
-    try {
-        def connection = (HttpURLConnection) new URL(repositoryUrl).openConnection()
-
-// If you wanted to use authentication uncomment this
-//        connection.setRequestProperty("Authorization", "Basic " + getBase64EncodedCredentials())
-        connection.setConnectTimeout(10000)
-        connection.setReadTimeout(10000)
-        connection.setRequestMethod("HEAD")
-
-        def responseCode = connection.getResponseCode()
-        println("responseCode: " + responseCode)
-
-        if (responseCode == 401) {
-            throw new RuntimeException("Unauthorized BitBucket user - please provide valid username and password in gradle.properties file")
-        }
-
-        return (200 == responseCode)
-    } catch (IOException ignored) {
-        return false
-    }
-}
-
-def getBase64EncodedCredentials() {
-    def s = USERNAME + ":" + PASSWORD;
-    return s.bytes.encodeBase64().toString()
 }
